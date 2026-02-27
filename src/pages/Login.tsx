@@ -25,19 +25,29 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[#f3eee1]">
       {/* 1. Black Institutional Header */}
-      <header className="bg-[#12110b] px-6 py-4 flex items-center gap-4 border-b-[3px] border-[#b48222]">
-        <div className="h-10 w-10 bg-[#b48222] rounded-full flex items-center justify-center">
-          <svg className="w-6 h-6 text-[#12110b]" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L3 7v2c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z" />
-          </svg>
-        </div>
-        <div>
-          <h1 className="text-white font-serif text-lg leading-tight tracking-wide">OFFICE OF THE REGISTRAR HIGH COURT</h1>
-          <p className="text-[#b48222] text-[9px] font-bold uppercase tracking-[0.1em]">
-            Draft Disciplinary Procedures Manual — High Court Review Portal
-          </p>
-        </div>
-      </header>
+     {/* HEADER */}
+        <header className="bg-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b-[3px] border-[#d9b929] shadow-sm">
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Logo */}
+            <img 
+              src="/JOB_LOGO.jpg" 
+              alt="High Court of Kenya Logo" 
+              className="h-10 w-10 sm:h-14 sm:w-14 object-contain" 
+            />
+            
+            {/* Title Group */}
+            <div>
+              <h1 className="text-[#25443c] font-serif text-base sm:text-xl leading-tight font-bold uppercase tracking-tight">
+                High Court of Kenya
+              </h1>
+              <p className="text-[#d9b929] text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] leading-none mt-1">
+                Draft Disciplinary Procedures Manual <span className="hidden md:inline">— Review Portal</span>
+              </p>
+            </div>
+          </div>
+
+         
+        </header>
 
       {/* 2. Main Login Section */}
       <main className="flex-1 flex items-center justify-center p-4">
@@ -49,13 +59,13 @@ const Login = () => {
 
           <h2 className="font-serif text-[2.5rem] text-[#12110b] mb-2">Judges' Portal</h2>
           <p className="text-center text-[#666] text-[13px] leading-relaxed mb-10 px-4">
-            Enter your PJ Service Number to access the Disciplinary Manual Review System
+            Enter your PJ Number to access the Disciplinary Manual Review System
           </p>
 
           <form className="w-full space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-[#444] uppercase tracking-wider">
-                PJ Service Number
+                PJ Number
               </label>
               <input
                 type="text"
@@ -92,7 +102,7 @@ const Login = () => {
               Access is restricted to serving High Court Judges.
             </p>
             <p className="text-[11px] font-medium text-slate-500">
-              Contact the Office of the Principal Judge for assistance.
+               Contact the Office of the Registrar High Court  for assistance
             </p>
           </div>
         </div>
