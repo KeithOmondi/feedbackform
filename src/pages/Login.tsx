@@ -9,95 +9,94 @@ const Login = () => {
   const { loading, error, user } = useAppSelector((state) => state.auth);
 
   const [pj, setPj] = useState("");
-  const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(login({ pj, password }));
+    dispatch(login({ pj }));
   };
 
+  // ✅ REDIRECT LOGIC: Take the user to the Welcome Page upon successful login
   useEffect(() => {
     if (user) {
-      navigate("/manuals");
+      navigate("/welcome"); // This matches the route for your new Invitation page
     }
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/60">
-        
-        {/* Institutional Branding */}
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-[#1a3a32] rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-emerald-900/20">
-            <svg className="w-6 h-6 text-[#b48222]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-black text-[#1a3a32] uppercase tracking-tighter">Login</h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"></p>
+    <div className="min-h-screen flex flex-col bg-[#f3eee1]">
+      {/* 1. Black Institutional Header */}
+      <header className="bg-[#12110b] px-6 py-4 flex items-center gap-4 border-b-[3px] border-[#b48222]">
+        <div className="h-10 w-10 bg-[#b48222] rounded-full flex items-center justify-center">
+          <svg className="w-6 h-6 text-[#12110b]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2L3 7v2c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z" />
+          </svg>
         </div>
+        <div>
+          <h1 className="text-white font-serif text-lg leading-tight tracking-wide">OFFICE OF THE REGISTRAR HIGH COURT</h1>
+          <p className="text-[#b48222] text-[9px] font-bold uppercase tracking-[0.1em]">
+            Draft Disciplinary Procedures Manual — High Court Review Portal
+          </p>
+        </div>
+      </header>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-[9px] font-black text-[#1a3a32] uppercase tracking-widest ml-1 mb-2 block">Personnel ID (PJ)</label>
+      {/* 2. Main Login Section */}
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="max-w-[420px] w-full bg-white shadow-sm border border-slate-200/60 rounded-sm overflow-hidden flex flex-col items-center pt-12 pb-8 px-10">
+          
+          <div className="w-20 h-20 bg-[#12110b] rounded-full mb-8 shadow-inner flex items-center justify-center">
+             <div className="w-16 h-16 border border-[#b48222]/30 rounded-full" />
+          </div>
+
+          <h2 className="font-serif text-[2.5rem] text-[#12110b] mb-2">Judges' Portal</h2>
+          <p className="text-center text-[#666] text-[13px] leading-relaxed mb-10 px-4">
+            Enter your PJ Service Number to access the Disciplinary Manual Review System
+          </p>
+
+          <form className="w-full space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-[#444] uppercase tracking-wider">
+                PJ Service Number
+              </label>
               <input
                 type="text"
                 required
-                placeholder="Enter PJ Number"
+                placeholder="Enter your PJ number"
                 value={pj}
                 onChange={(e) => setPj(e.target.value)}
-                className="appearance-none relative block w-full px-5 py-4 border border-slate-200 placeholder-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#b48222]/5 focus:border-[#b48222]/40 transition-all text-sm font-medium"
+                className="w-full bg-[#f9f7f0] border border-slate-200 px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#b48222] transition-colors placeholder:text-slate-400"
               />
             </div>
-            
-            <div>
-              <label className="text-[9px] font-black text-[#1a3a32] uppercase tracking-widest ml-1 mb-2 block">Security Credential</label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-5 py-4 border border-slate-200 placeholder-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#b48222]/5 focus:border-[#b48222]/40 transition-all text-sm font-medium"
-              />
-            </div>
-          </div>
 
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl">
-              <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight">{error}</p>
-            </div>
-          )}
+            {error && (
+              <div className="bg-red-50 border border-red-100 p-3">
+                <p className="text-[11px] font-bold text-red-700 uppercase tracking-tight text-center">{error}</p>
+              </div>
+            )}
 
-          <div>
             <button
               type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl text-white bg-[#1a3a32] hover:bg-[#112621] focus:outline-none focus:ring-4 focus:ring-emerald-900/10 transition-all disabled:opacity-50 shadow-xl shadow-emerald-900/10"
+              disabled={loading || !pj.trim()}
+              className="w-full bg-[#12110b] text-white py-3.5 text-xs font-bold uppercase tracking-[0.15em] hover:bg-black transition-all flex justify-center items-center gap-2 group disabled:opacity-50"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Verifying...
-                </span>
-              ) : (
-                "Authorize Session"
+              {loading ? "Verifying..." : (
+                <>
+                  Access Portal 
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                </>
               )}
             </button>
-          </div>
-        </form>
+          </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose">
-           
-            <span className="text-[#b48222]">Kindly login to access the portal</span>
-          </p>
+          <div className="mt-10 text-center space-y-1">
+            <p className="text-[11px] font-medium text-slate-500">
+              Access is restricted to serving High Court Judges.
+            </p>
+            <p className="text-[11px] font-medium text-slate-500">
+              Contact the Office of the Principal Judge for assistance.
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

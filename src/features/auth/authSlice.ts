@@ -2,13 +2,16 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { loginUser } from "./authService";
 
 /* ================================
-   TYPES
+    TYPES
 ================================ */
 
 export interface IUser {
   id: string;
   pj: string;
-  role: string;
+  role: "admin" | "user"; // Explicitly typed for better routing logic
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 interface AuthState {
@@ -18,9 +21,9 @@ interface AuthState {
   error: string | null;
 }
 
+// Password removed from payload
 interface LoginPayload {
   pj: string;
-  password: string;
 }
 
 interface LoginResponse {
@@ -29,7 +32,7 @@ interface LoginResponse {
 }
 
 /* ================================
-   INITIAL STATE (Persisted)
+    INITIAL STATE (Persisted)
 ================================ */
 
 const tokenFromStorage = localStorage.getItem("token");
@@ -43,7 +46,7 @@ const initialState: AuthState = {
 };
 
 /* ================================
-   LOGIN THUNK
+    LOGIN THUNK
 ================================ */
 
 export const login = createAsyncThunk<
@@ -53,23 +56,17 @@ export const login = createAsyncThunk<
 >("auth/login", async (data, thunkAPI) => {
   try {
     const response = await loginUser(data);
-
-    // Expected backend response:
-    // {
-    //   token: "jwt-token",
-    //   data: { id, pj, role }
-    // }
-
     return response;
   } catch (error: any) {
+    // Handling cases where the backend might return 404 for a missing PJ
     return thunkAPI.rejectWithValue(
-      error.response?.data?.message || "Login failed"
+      error.response?.data?.message || "Authentication failed"
     );
   }
 });
 
 /* ================================
-   SLICE
+    SLICE
 ================================ */
 
 const authSlice = createSlice({
@@ -84,6 +81,9 @@ const authSlice = createSlice({
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
+    clearError: (state) => {
+      state.error = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -96,7 +96,6 @@ const authSlice = createSlice({
       /* ===== LOGIN SUCCESS ===== */
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-
         state.user = action.payload.data;
         state.token = action.payload.token;
 
@@ -110,14 +109,14 @@ const authSlice = createSlice({
       /* ===== LOGIN FAILED ===== */
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "Something went wrong";
+        state.error = action.payload || "Unauthorized PJ Number";
       });
   },
 });
 
 /* ================================
-   EXPORTS
+    EXPORTS
 ================================ */
 
-export const { logout } = authSlice.actions;
+export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;

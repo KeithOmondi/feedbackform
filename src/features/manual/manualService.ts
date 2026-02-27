@@ -9,6 +9,7 @@ export interface IManualEntry {
   comment?: string;
   proposedChange?: string;
   justification?: string;
+  reference?: string; // Added for Field 3
 }
 
 export interface IManual {
@@ -16,18 +17,21 @@ export interface IManual {
   code: string;
   title: string;
   part: string;
+  description?: string; // Added for UI Subtitles
+  content?: string;     // The Draft Provision text
   comments: IManualEntry[];
   amendments: IManualEntry[];
   justifications: IManualEntry[];
+  references: IManualEntry[]; // Added for Field 3
 }
 
-// These match the 'type' keys handled by your new backend controller
-export type EntryType = "comment" | "amendment" | "justification";
+// Added "reference" to match the updated backend controller
+export type EntryType = "comment" | "amendment" | "justification" | "reference";
 
 export interface PostEntryPayload {
   sectionId: string;
   userId: string;
-  content: string; // Unified name
+  content: string; 
   type: EntryType;
 }
 
@@ -36,12 +40,11 @@ export interface PostEntryPayload {
 ================================ */
 
 export const getManuals = async (): Promise<IManual[]> => {
-  const res = await api.get("/manual/get"); // Matching our updated route
+  const res = await api.get("/manual/get"); 
   return res.data.data;
 };
 
 export const addManualEntry = async (payload: PostEntryPayload): Promise<IManual> => {
-  // Hits the single POST /manual/entry route
   const response = await api.post(`/manual/entry`, payload);
   return response.data.data;
 };

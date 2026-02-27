@@ -7,6 +7,9 @@ import {
 import * as service from "./manualService";
 import { type IManual, type PostEntryPayload } from "./manualService";
 
+/* ===============================
+    STATE INTERFACE
+================================ */
 interface ManualState {
   manuals: IManual[];
   loading: boolean;
@@ -23,6 +26,7 @@ const initialState: ManualState = {
     THUNKS
 ================================ */
 
+// Fetches the entire manual repository
 export const fetchManuals = createAsyncThunk(
   "manual/fetchAll",
   async (_, { rejectWithValue }) => {
@@ -34,20 +38,27 @@ export const fetchManuals = createAsyncThunk(
   }
 );
 
+// Posts a single entry (Comment, Amendment, Justification, or Reference)
 export const postEntry = createAsyncThunk(
   "manual/postEntry",
   async (payload: PostEntryPayload, { rejectWithValue }) => {
     try {
       return await service.addManualEntry(payload);
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || `Failed to post ${payload.type}`);
+      return rejectWithValue(
+        err.response?.data?.message || `Failed to post ${payload.type}`
+      );
     }
   }
 );
 
+// Updates metadata of a manual section (Admin only)
 export const editManual = createAsyncThunk(
   "manual/update",
-  async ({ id, data }: { id: string; data: Partial<IManual> }, { rejectWithValue }) => {
+  async (
+    { id, data }: { id: string; data: Partial<IManual> },
+    { rejectWithValue }
+  ) => {
     try {
       return await service.updateManual(id, data);
     } catch (err: any) {
@@ -56,6 +67,7 @@ export const editManual = createAsyncThunk(
   }
 );
 
+// Removes a manual section from the registry
 export const removeManual = createAsyncThunk(
   "manual/delete",
   async (id: string, { rejectWithValue }) => {
@@ -82,29 +94,38 @@ const manualSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Logic
+      /* ===== FETCH SUCCESS ===== */
       .addCase(fetchManuals.fulfilled, (state, action: PayloadAction<IManual[]>) => {
         state.loading = false;
         state.manuals = action.payload;
+        state.error = null;
       })
-      // Delete Logic
+
+      /* ===== DELETE SUCCESS ===== */
       .addCase(removeManual.fulfilled, (state, action: PayloadAction<string>) => {
         state.loading = false;
         state.manuals = state.manuals.filter((m) => m._id !== action.payload);
+        state.error = null;
       })
-      // Unified "Update Item in List" Logic for both postEntry and editManual
+
+      /* ===== UNIFIED UPDATE LOGIC ===== */
+      // This handles both posting new feedback and editing section details
       .addMatcher(
         isAnyOf(postEntry.fulfilled, editManual.fulfilled),
         (state, action: PayloadAction<IManual>) => {
           state.loading = false;
           state.error = null;
-          const index = state.manuals.findIndex((m) => m._id === action.payload._id);
+          const index = state.manuals.findIndex(
+            (m) => m._id === action.payload._id
+          );
           if (index !== -1) {
+            // Replaces the local section object with the updated one from server
             state.manuals[index] = action.payload;
           }
         }
       )
-      // Pending/Rejected Matchers
+
+      /* ===== GLOBAL PENDING STATE ===== */
       .addMatcher(
         (action) => action.type.endsWith("/pending"),
         (state) => {
@@ -112,6 +133,8 @@ const manualSlice = createSlice({
           state.error = null;
         }
       )
+
+      /* ===== GLOBAL REJECTED STATE ===== */
       .addMatcher(
         (action) => action.type.endsWith("/rejected"),
         (state, action: any) => {

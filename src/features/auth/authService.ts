@@ -1,8 +1,8 @@
 import api from "../../api/axios";
 
+// Removed password requirement
 interface LoginPayload {
   pj: string;
-  password: string;
 }
 
 export const loginUser = async (data: LoginPayload) => {
