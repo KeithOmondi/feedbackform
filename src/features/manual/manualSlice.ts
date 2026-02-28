@@ -1,10 +1,11 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  createAsyncThunk,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import * as service from "./manualService";
 import { type IManual, type PostEntryPayload } from "./manualService";
 
-/* ===============================
-    STATE INTERFACE
-================================ */
 interface ManualState {
   manuals: IManual[];
   adminManuals: IManual[];
@@ -23,7 +24,6 @@ const initialState: ManualState = {
     THUNKS
 ================================ */
 
-/** USER FETCH */
 export const fetchManuals = createAsyncThunk(
   "manual/fetchAll",
   async (_, { rejectWithValue }) => {
@@ -32,22 +32,22 @@ export const fetchManuals = createAsyncThunk(
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || "Fetch failed");
     }
-  }
+  },
 );
 
-/** ADMIN FETCH */
 export const fetchAdminManuals = createAsyncThunk(
   "manual/fetchAdmin",
   async (_, { rejectWithValue }) => {
     try {
       return await service.getAdminManuals();
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Admin fetch failed");
+      return rejectWithValue(
+        err.response?.data?.message || "Admin fetch failed",
+      );
     }
-  }
+  },
 );
 
-/** POST ENTRY */
 export const postEntry = createAsyncThunk(
   "manual/postEntry",
   async (payload: PostEntryPayload, { rejectWithValue }) => {
@@ -55,17 +55,13 @@ export const postEntry = createAsyncThunk(
       return await service.addManualEntry(payload);
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || `Failed to post ${payload.type}`
+        err.response?.data?.message || `Failed to post ${payload.type}`,
       );
     }
-  }
+  },
 );
 
-/** DOWNLOAD PDF REPORT (optional individual user) */
-export const downloadReport = createAsyncThunk<
-  void,                   // return type
-  string | undefined       // payload type (userId optional)
->(
+export const downloadReport = createAsyncThunk<void, string | undefined>(
   "manual/downloadReport",
   async (userId, { rejectWithValue }) => {
     try {
@@ -73,9 +69,28 @@ export const downloadReport = createAsyncThunk<
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || "Download failed");
     }
-  }
+  },
 );
 
+export const deleteEntry = createAsyncThunk(
+  "manual/deleteEntry",
+  async (
+    payload: { sectionId: string; entryType: string; entryId: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await service.removeManualEntry(
+        payload.sectionId,
+        payload.entryType,
+        payload.entryId
+      );
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || `Failed to delete ${payload.entryType}`
+      );
+    }
+  }
+);
 
 /* ===============================
     SLICE
@@ -91,44 +106,61 @@ const manualSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      /* USER FETCH */
-      .addCase(fetchManuals.fulfilled, (state, action: PayloadAction<IManual[]>) => {
-        state.loading = false;
-        state.manuals = action.payload;
-        state.error = null;
-      })
+      .addCase(
+        fetchManuals.fulfilled,
+        (state, action: PayloadAction<IManual[]>) => {
+          state.loading = false;
+          state.manuals = action.payload;
+        },
+      )
+      .addCase(
+        fetchAdminManuals.fulfilled,
+        (state, action: PayloadAction<IManual[]>) => {
+          state.loading = false;
+          state.adminManuals = action.payload;
+        },
+      )
 
-      /* ADMIN FETCH */
-      .addCase(fetchAdminManuals.fulfilled, (state, action: PayloadAction<IManual[]>) => {
-        state.loading = false;
-        state.adminManuals = action.payload;
-        state.error = null;
-      })
+      // inside manualSlice.ts extraReducers:
+.addCase(deleteEntry.fulfilled, (state, action: PayloadAction<IManual>) => {
+  state.loading = false;
 
-      /* UPDATE AFTER POST */
+  // Update User View array
+  const userIdx = state.manuals.findIndex((m) => m._id === action.payload._id);
+  if (userIdx !== -1) state.manuals[userIdx] = action.payload;
+
+  // Update Admin View array
+  const adminIdx = state.adminManuals.findIndex((m) => m._id === action.payload._id);
+  if (adminIdx !== -1) state.adminManuals[adminIdx] = action.payload;
+})
       .addCase(postEntry.fulfilled, (state, action: PayloadAction<IManual>) => {
         state.loading = false;
-        state.error = null;
-        const index = state.manuals.findIndex((m) => m._id === action.payload._id);
-        if (index !== -1) state.manuals[index] = action.payload;
-      })
 
-      /* GLOBAL PENDING */
+        // Update User View array
+        const userIdx = state.manuals.findIndex(
+          (m) => m._id === action.payload._id,
+        );
+        if (userIdx !== -1) state.manuals[userIdx] = action.payload;
+
+        // Update Admin View array
+        const adminIdx = state.adminManuals.findIndex(
+          (m) => m._id === action.payload._id,
+        );
+        if (adminIdx !== -1) state.adminManuals[adminIdx] = action.payload;
+      })
       .addMatcher(
         (action) => action.type.endsWith("/pending"),
         (state) => {
           state.loading = true;
           state.error = null;
-        }
+        },
       )
-
-      /* GLOBAL REJECTED */
       .addMatcher(
         (action) => action.type.endsWith("/rejected"),
         (state, action: any) => {
           state.loading = false;
           state.error = action.payload || "An unexpected error occurred";
-        }
+        },
       );
   },
 });

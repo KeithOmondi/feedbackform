@@ -11,7 +11,7 @@ export interface IManualEntry {
   proposedChange?: string;
   justification?: string;
   reference?: string;
-  content?: string;
+  action?: "amend" | "clarify" | "Retain as is" | "delete"; // Added action enum
 }
 
 export interface IManual {
@@ -25,14 +25,16 @@ export interface IManual {
   amendments: IManualEntry[];
   justifications: IManualEntry[];
   references: IManualEntry[];
+  actions: IManualEntry[]; // Added actions array
 }
 
-export type EntryType = "comment" | "amendment" | "justification" | "reference";
+// Updated EntryType to include "action"
+export type EntryType = "comment" | "amendment" | "justification" | "reference" | "action";
 
 export interface PostEntryPayload {
   sectionId: string;
   userId: string;
-  content: string;
+  content: string; // This will hold the action string (e.g., "amend") if type is "action"
   type: EntryType;
 }
 
@@ -40,28 +42,21 @@ export interface PostEntryPayload {
     SERVICE FUNCTIONS
 ================================ */
 
-/** USER: Fetch Questions Only */
 export const getManuals = async (): Promise<IManual[]> => {
   const res = await api.get("/manual/get");
   return res.data.data;
 };
 
-/** ADMIN: Fetch Questions + Answers */
 export const getAdminManuals = async (): Promise<IManual[]> => {
   const res = await api.get("/manual/admin");
   return res.data.data;
 };
 
-/** Submit Answer (User/Admin) */
 export const addManualEntry = async (payload: PostEntryPayload): Promise<IManual> => {
   const response = await api.post("/manual/entry", payload);
   return response.data.data;
 };
 
-/**
- * ADMIN: Download PDF Report
- * @param userId optional, if provided generates individual report
- */
 export const downloadManualReport = async (userId?: string): Promise<void> => {
   const response = await api.get("/manual/admin/download", {
     responseType: "blob",
@@ -80,4 +75,17 @@ export const downloadManualReport = async (userId?: string): Promise<void> => {
   document.body.appendChild(link);
   link.click();
   link.remove();
+  window.URL.revokeObjectURL(url); // Clean up memory
+};
+
+
+// Add this to your service file
+export const removeManualEntry = async (
+  sectionId: string, 
+  entryType: string, 
+  entryId: string
+): Promise<IManual> => {
+  // Matches backend route: DELETE /manual/entry/:sectionId/:entryType/:entryId
+  const response = await api.delete(`/manual/section/${sectionId}/${entryType}/${entryId}`);
+  return response.data.data;
 };

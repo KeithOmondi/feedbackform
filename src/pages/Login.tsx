@@ -131,7 +131,7 @@ const Login = () => {
             
             <p className="text-[11px] font-medium text-slate-500 leading-snug">
               Access is restructed to serving High Court Judges <br /> 
-              <span className="text-[#25443c] font-bold underline decoration-[#d9b929] underline-offset-4 cursor-help">
+              <span className="text-[11px] font-medium text-slate-500 leading-snug cursor-help">
                 Contact the Office of the Registrar High Court fo assistance
               </span>
             </p>

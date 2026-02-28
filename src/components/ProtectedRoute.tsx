@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: Props) => {
   // 2. User is not logged in at all
   if (!token) {
     // Redirect to login, but save the current location so we can redirect back after login
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // 3. Admin access required but user is just a standard "user"
