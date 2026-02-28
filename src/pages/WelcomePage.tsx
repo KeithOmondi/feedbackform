@@ -32,7 +32,7 @@ const WelcomePage = () => {
         <div className="flex items-center gap-4 border-l border-gray-200 pl-4">
           <div className="flex items-center gap-3 sm:gap-5">
             <p className="text-[#25443c] text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap hidden xs:block">
-              Hon. Justice {user?.firstName && user?.lastName 
+              {user?.firstName && user?.lastName 
                 ? `${user.firstName} ${user.lastName}` 
                 : "Roseline Korir"}
             </p>
