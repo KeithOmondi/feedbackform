@@ -64,7 +64,7 @@ const WelcomePage = () => {
             <div className="flex mt-3">
               <span className="bg-[#12110b] text-[#b48222] px-4 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-md">
                 <span className="w-2 h-2 bg-[#b48222] rounded-full animate-pulse"></span>
-                Hon. Justice {user?.firstName && user?.lastName 
+                {user?.firstName && user?.lastName 
                   ? `${user.firstName} ${user.lastName}` 
                   : "Roseline Korir"}
               </span>
