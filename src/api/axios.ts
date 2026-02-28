@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/v1", // change if needed
+  baseURL: "https://feebackserver.onrender.com/api/v1", // change if needed
 });
 
 // Attach token automatically
