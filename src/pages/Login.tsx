@@ -53,8 +53,12 @@ const Login = () => {
       <main className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-[420px] w-full bg-white shadow-sm border border-slate-200/60 rounded-sm overflow-hidden flex flex-col items-center pt-12 pb-8 px-10">
           
-          <div className="w-20 h-20 bg-[#12110b] rounded-full mb-8 shadow-inner flex items-center justify-center">
-             <div className="w-16 h-16 border border-[#b48222]/30 rounded-full" />
+          <div className="w-20 h-20 bg-[#fff] rounded-full mb-8 shadow-inner flex items-center justify-center">
+              <img 
+              src="/JOB_LOGO.jpg" 
+              alt="High Court of Kenya Logo" 
+              className="h-10 w-10 sm:h-14 sm:w-14 object-contain" 
+            />
           </div>
 
           <h2 className="font-serif text-[2.5rem] text-[#12110b] mb-2">Judges' Portal</h2>

@@ -76,7 +76,7 @@ const UserManualPage = () => {
   };
 
   const displayName = user?.firstName && user?.lastName 
-    ? `Hon. Justice ${user.firstName} ${user.lastName}`
+    ? `${user.firstName} ${user.lastName}`
     : "Hon. Justice Roseline Korir";
 
   return (
