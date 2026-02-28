@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import { loginUser } from "./authService";
 
 /* ================================
@@ -6,12 +6,14 @@ import { loginUser } from "./authService";
 ================================ */
 
 export interface IUser {
-  id: string;
+  _id: string; // Mongoose uses _id
   pj: string;
-  role: "admin" | "user"; // Explicitly typed for better routing logic
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: "admin" | "user"; // Crucial for routing
+  station?: string;
+  img?: string;
 }
 
 interface AuthState {
@@ -21,26 +23,31 @@ interface AuthState {
   error: string | null;
 }
 
-// Password removed from payload
 interface LoginPayload {
   pj: string;
 }
 
 interface LoginResponse {
   token: string;
-  data: IUser;
+  data: IUser; // The user object returned from backend
 }
 
 /* ================================
-    INITIAL STATE (Persisted)
+    INITIAL STATE (Safe Hydration)
 ================================ */
 
-const tokenFromStorage = localStorage.getItem("token");
-const userFromStorage = localStorage.getItem("user");
+const getInitialUser = (): IUser | null => {
+  const user = localStorage.getItem("user");
+  try {
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+};
 
 const initialState: AuthState = {
-  user: userFromStorage ? JSON.parse(userFromStorage) : null,
-  token: tokenFromStorage,
+  user: getInitialUser(),
+  token: localStorage.getItem("token"),
   loading: false,
   error: null,
 };
@@ -56,11 +63,10 @@ export const login = createAsyncThunk<
 >("auth/login", async (data, thunkAPI) => {
   try {
     const response = await loginUser(data);
-    return response;
+    return response; // response contains { token, data }
   } catch (error: any) {
-    // Handling cases where the backend might return 404 for a missing PJ
     return thunkAPI.rejectWithValue(
-      error.response?.data?.message || "Authentication failed"
+      error.response?.data?.message || "Invalid PJ Number or Access Denied"
     );
   }
 });
@@ -77,7 +83,6 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.error = null;
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
@@ -87,36 +92,25 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      /* ===== LOGIN PENDING ===== */
       .addCase(login.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-
-      /* ===== LOGIN SUCCESS ===== */
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(login.fulfilled, (state, action: PayloadAction<LoginResponse>) => {
+        const { token, data } = action.payload;
         state.loading = false;
-        state.user = action.payload.data;
-        state.token = action.payload.token;
+        state.user = data;
+        state.token = token;
 
-        localStorage.setItem("token", action.payload.token);
-        localStorage.setItem(
-          "user",
-          JSON.stringify(action.payload.data)
-        );
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(data));
       })
-
-      /* ===== LOGIN FAILED ===== */
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "Unauthorized PJ Number";
+        state.error = action.payload || "Authentication failed";
       });
   },
 });
-
-/* ================================
-    EXPORTS
-================================ */
 
 export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;

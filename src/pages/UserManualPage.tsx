@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { fetchManuals, postEntry } from "../features/manual/manualSlice";
 import { logout } from "../features/auth/authSlice";
-import { Menu, X, Save, CheckCircle } from "lucide-react";
+import { Menu, X, Save, CheckCircle, Loader2 } from "lucide-react";
 
 const UserManualPage = () => {
   const dispatch = useAppDispatch();
@@ -24,6 +24,7 @@ const UserManualPage = () => {
     dispatch(fetchManuals());
   }, [dispatch]);
 
+  // Group sections by Part for the sidebar
   const groupedManuals = useMemo(() => {
     return manuals.reduce((acc: { [key: string]: any[] }, m) => {
       const part = m.part || "UNASSIGNED";
@@ -33,6 +34,7 @@ const UserManualPage = () => {
     }, {});
   }, [manuals]);
 
+  // Set initial active section
   useEffect(() => {
     if (manuals.length > 0 && !activeSectionId) {
       setActiveSectionId(manuals[0]._id);
@@ -42,25 +44,47 @@ const UserManualPage = () => {
   const activeSection = useMemo(() => manuals.find(m => m._id === activeSectionId), [manuals, activeSectionId]);
   const activeIndex = useMemo(() => manuals.findIndex(m => m._id === activeSectionId), [manuals, activeSectionId]);
 
+  // Reset form when changing sections
   useEffect(() => {
     setFormData({ action: "Amend", rationale: "", references: "", wording: "" });
     setIsSidebarOpen(false); 
   }, [activeSectionId]);
 
   const handleSave = async (shouldNavigateNext: boolean = false) => {
-    if (!activeSection || !user) return;
+    if (!activeSection || !user?._id) return;
     setIsSubmitting(true);
 
     const submissions = [];
+
+    // 1. Submit Justification (Action + Rationale)
     if (formData.rationale.trim() || formData.action) {
       const contentWithAction = `[ACTION: ${formData.action}] ${formData.rationale}`;
-      submissions.push(dispatch(postEntry({ sectionId: activeSection._id, userId: user.id, content: contentWithAction, type: "justification" })));
+      submissions.push(dispatch(postEntry({ 
+        sectionId: activeSection._id, 
+        userId: user._id, 
+        content: contentWithAction, 
+        type: "justification" 
+      })));
     }
+
+    // 2. Submit Reference
     if (formData.references.trim()) {
-      submissions.push(dispatch(postEntry({ sectionId: activeSection._id, userId: user.id, content: formData.references, type: "reference" })));
+      submissions.push(dispatch(postEntry({ 
+        sectionId: activeSection._id, 
+        userId: user._id, 
+        content: formData.references, 
+        type: "reference" 
+      })));
     }
+
+    // 3. Submit Amendment (Wording)
     if (formData.wording.trim()) {
-      submissions.push(dispatch(postEntry({ sectionId: activeSection._id, userId: user.id, content: formData.wording, type: "amendment" })));
+      submissions.push(dispatch(postEntry({ 
+        sectionId: activeSection._id, 
+        userId: user._id, 
+        content: formData.wording, 
+        type: "amendment" 
+      })));
     }
 
     try {
@@ -75,9 +99,9 @@ const UserManualPage = () => {
     }
   };
 
-  const displayName = user?.firstName && user?.lastName 
-    ? `${user.firstName} ${user.lastName}`
-    : "Hon. Justice Roseline Korir";
+  const displayName = user?.firstName 
+    ? `${user.firstName} ${user.lastName || ""}`
+    : "Hon. Justice User";
 
   return (
     <div className="flex h-screen bg-[#f3eee1] overflow-hidden font-sans relative">
@@ -102,7 +126,11 @@ const UserManualPage = () => {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
-          {!loading && Object.entries(groupedManuals).map(([partName, sections]) => (
+          {loading ? (
+             <div className="px-6 flex items-center gap-2 text-white/40 text-xs">
+                <Loader2 size={14} className="animate-spin" /> Loading library...
+             </div>
+          ) : Object.entries(groupedManuals).map(([partName, sections]) => (
             <div key={partName} className="mb-6">
               <h3 className="px-6 text-[9px] font-black text-[#d9b929] uppercase mb-2 tracking-[0.15em] opacity-80">{partName}</h3>
               <div className="space-y-0.5">
@@ -131,7 +159,6 @@ const UserManualPage = () => {
             <button className="lg:hidden p-2 text-[#25443c] hover:bg-gray-100 rounded-md" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={24} />
             </button>
-            <img src="/JOB_LOGO.jpg" alt="Logo" className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
             <div className="hidden xs:block">
               <h1 className="text-[#25443c] font-serif text-sm sm:text-lg leading-tight font-bold uppercase tracking-tight">High Court of Kenya</h1>
               <p className="text-[#d9b929] text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.1em]">Draft Disciplinary Procedures Manual</p>
@@ -255,7 +282,7 @@ const UserManualPage = () => {
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-slate-400 font-serif italic animate-pulse">
-               Accessing Registry Records...
+                Accessing Registry Records...
             </div>
           )}
         </div>

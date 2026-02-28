@@ -1,179 +1,257 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
-import {
-  fetchManuals,
-  editManual,
-  removeManual,
-  postEntry,
-} from "../features/manual/manualSlice";
-import { type IManual, type EntryType } from "../features/manual/manualService";
+import { fetchAdminManuals, downloadReport } from "../features/manual/manualSlice";
+import { type IManual, type IManualEntry } from "../features/manual/manualService";
+import { Download, Loader2, Users, Landmark, FileText, CheckCircle } from "lucide-react";
 
 const AdminDashboard = () => {
   const dispatch = useAppDispatch();
-  const { manuals, loading } = useAppSelector((state) => state.manual);
-  const { user } = useAppSelector((state) => state.auth);
-
-  // Administrative State
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
-  const [editingSectionData, setEditingSectionData] = useState<Partial<IManual> | null>(null);
-
-  // Unified Submission State - Store text by sectionId-type key
-  const [entryTexts, setEntryTexts] = useState<Record<string, string>>({});
+  const { adminManuals, loading } = useAppSelector((state) => state.manual);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    dispatch(fetchManuals());
+    dispatch(fetchAdminManuals());
   }, [dispatch]);
 
-  const handleUpdate = () => {
-    if (!editingSectionId || !editingSectionData) return;
-    dispatch(editManual({ id: editingSectionId, data: editingSectionData }));
-    setEditingSectionId(null);
-    setEditingSectionData(null);
+  const handleDownload = (userId?: string) => {
+    dispatch(downloadReport(userId));
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to strike this section from the record?")) {
-      dispatch(removeManual(id));
+  // Memoized unique user list from the audit logs
+  const users = useMemo(() => {
+    const usersMap: Record<string, { _id: string; name: string; pj: string }> = {};
+    adminManuals.forEach((section) => {
+      ["comments", "justifications", "references", "amendments"].forEach((key) => {
+        (section as any)[key]?.forEach((entry: IManualEntry) => {
+          if (entry.userId) {
+            usersMap[entry.userId._id] = {
+              _id: entry.userId._id,
+              name: `${entry.userId.firstName} ${entry.userId.lastName}`,
+              pj: entry.userId.pj,
+            };
+          }
+        });
+      });
+    });
+    return Object.values(usersMap).sort((a, b) => a.name.localeCompare(b.name));
+  }, [adminManuals]);
+
+  const columns: { label: string; key: keyof Pick<IManual, "justifications" | "references" | "amendments" | "comments"> }[] = [
+    { label: "Justifications", key: "justifications" },
+    { label: "References", key: "references" },
+    { label: "Proposed Wording", key: "amendments" },
+    { label: "General Comments", key: "comments" },
+  ];
+
+  const getEntryText = (entry: IManualEntry, type: string) => {
+    switch (type) {
+      case "comments": return entry.comment;
+      case "justifications": return entry.justification;
+      case "amendments": return entry.proposedChange;
+      case "references": return entry.reference;
+      default: return "";
     }
   };
 
-  const handleEntrySubmit = (sectionId: string, rawType: string) => {
-    const inputKey = `${sectionId}-${rawType}`;
-    const text = entryTexts[inputKey];
-    
-    if (!user || !text?.trim()) return;
-
-    // Singularize type: "comments" -> "comment"
-    const singularType = rawType.slice(0, -1) as EntryType;
-
-    dispatch(postEntry({ 
-      sectionId, 
-      userId: user.id, 
-      content: text.trim(), // Match updated backend key
-      type: singularType 
-    }));
-    
-    // Reset specific text field
-    setEntryTexts((prev) => ({ ...prev, [inputKey]: "" }));
-  };
-
   return (
-    <div className="max-w-6xl mx-auto py-10 px-6 space-y-10">
-      {/* Dashboard Header */}
-      <div className="border-b border-slate-200 pb-6 flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-black text-[#1a3a32] uppercase tracking-tighter">Admin Registry Management</h1>
-          <p className="text-[10px] font-bold text-[#b48222] uppercase tracking-[0.2em] mt-1">Full Oversight & Document Control</p>
-        </div>
-        <div className="text-right">
-          <span className="text-[9px] font-black text-slate-400 uppercase block">Active Administrator</span>
-          <span className="text-xs font-bold text-[#1a3a32]">{user?.id || "N/A"}</span>
-        </div>
-      </div>
-
-      {loading && manuals.length === 0 ? (
-        <div className="text-center py-20 text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">
-          Synchronizing Registry...
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-8">
-          {manuals.map((section: IManual) => (
-            <div key={section._id} className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden transition-all hover:shadow-2xl">
-              
-              {/* SECTION HEADER / EDIT MODE */}
-              <div className={`px-8 py-5 flex items-center justify-between ${editingSectionId === section._id ? 'bg-slate-50' : 'bg-[#1a3a32]'}`}>
-                {editingSectionId === section._id ? (
-                  <div className="flex gap-3 w-full items-center">
-                    <input
-                      className="bg-white border border-slate-200 px-3 py-1 rounded text-xs font-bold w-24"
-                      value={editingSectionData?.code || ""}
-                      onChange={(e) => setEditingSectionData({ ...editingSectionData, code: e.target.value })}
-                    />
-                    <input
-                      className="bg-white border border-slate-200 px-3 py-1 rounded text-xs font-bold flex-1"
-                      value={editingSectionData?.title || ""}
-                      onChange={(e) => setEditingSectionData({ ...editingSectionData, title: e.target.value })}
-                    />
-                    <button onClick={handleUpdate} className="bg-[#b48222] text-white px-4 py-1 rounded text-[10px] font-black uppercase">Save</button>
-                    <button onClick={() => setEditingSectionId(null)} className="text-slate-400 text-[10px] font-black uppercase">Cancel</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <span className="bg-[#b48222] text-white text-[10px] font-black px-3 py-1 rounded tracking-widest">{section.code}</span>
-                      <h3 className="text-sm font-black text-white uppercase tracking-tight">{section.title}</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => { setEditingSectionId(section._id); setEditingSectionData(section); }}
-                        className="text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-all"
-                      >
-                        Modify
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(section._id)}
-                        className="text-[9px] font-black text-red-400/80 hover:text-red-400 uppercase tracking-widest transition-all"
-                      >
-                        Strike
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* DATA GRIDS */}
-              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                {(["comments", "amendments", "justifications"] as const).map((type) => {
-                  const inputKey = `${section._id}-${type}`;
-                  return (
-                    <div key={type} className="space-y-4">
-                      <h4 className="text-[10px] font-black text-[#1a3a32] uppercase tracking-[0.15em] border-b border-slate-100 pb-2">{type}</h4>
-                      
-                      {/* List entries */}
-                      <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {section[type]?.length ? (
-                          section[type].map((item: any, idx: number) => (
-                            <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-100 relative group">
-                              <p className="text-[11px] text-slate-600 leading-snug">
-                                "{item.comment || item.proposedChange || item.justification}"
-                              </p>
-                              <p className="text-[8px] font-bold text-slate-300 mt-2 uppercase tracking-tighter">
-                                {new Date(item.createdAt).toLocaleDateString()} • ID: {item.userId?.toString().slice(-4) || "????"}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-[9px] text-slate-300 italic">No entries recorded.</p>
-                        )}
-                      </div>
-
-                      {/* Admin quick-add for this section */}
-                      <div className="pt-2 flex gap-2">
-                        <input
-                          type="text"
-                          placeholder={`Add ${type.slice(0, -1)}...`}
-                          className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[10px] flex-1 outline-none focus:border-[#b48222] transition-all"
-                          value={entryTexts[inputKey] || ""}
-                          onChange={(e) => setEntryTexts({ ...entryTexts, [inputKey]: e.target.value })}
-                          onKeyDown={(e) => e.key === 'Enter' && handleEntrySubmit(section._id, type)}
-                        />
-                        <button 
-                          onClick={() => handleEntrySubmit(section._id, type)}
-                          className="bg-[#1a3a32] text-white p-2 rounded-lg hover:bg-black transition-all"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+    <div className="flex h-screen bg-[#fdfcf0] overflow-hidden font-sans">
+      {/* SIDEBAR - Deep Green UI */}
+      <aside className="w-[340px] bg-[#1a3a32] text-white flex flex-col border-r border-[#b48222]/20 shadow-2xl z-20">
+        <div className="p-8 border-b border-white/5 bg-[#16312a]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-[#b48222] p-2.5 rounded-sm shadow-lg">
+              <Landmark size={22} className="text-white" />
             </div>
-          ))}
+            <h2 className="font-bold text-[12px] uppercase tracking-[0.25em] text-[#b48222]">
+              Audit Registry
+            </h2>
+          </div>
+          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+            Reviewing Judge
+          </p>
         </div>
-      )}
+
+        {/* USER LIST */}
+        <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+          {users.length ? (
+            users.map((u) => (
+              <button
+                key={u._id}
+                className={`w-full text-left px-8 py-6 transition-all border-l-[4px] relative border-b border-white/5 ${
+                  selectedUserId === u._id
+                    ? "bg-[#b48222]/10 border-[#b48222] text-white shadow-inner"
+                    : "border-transparent text-white/50 hover:text-white hover:bg-white/5"
+                }`}
+                onClick={() => setSelectedUserId(u._id)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wider mb-1">
+                      {u.name}
+                    </p>
+                    <p className={`text-[9px] font-mono font-bold ${
+                      selectedUserId === u._id ? "text-[#b48222]" : "text-white/20"
+                    }`}>
+                      PJ NO: {u.pj}
+                    </p>
+                  </div>
+                  {selectedUserId === u._id && (
+                    <div className="bg-[#b48222] rounded-full p-1 shadow-md">
+                      <CheckCircle size={12} className="text-white" />
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="px-8 py-20 text-center">
+              <Users size={32} className="mx-auto text-white/5 mb-4" />
+              <p className="text-[9px] text-white/20 uppercase font-black tracking-widest">
+                No active archives found
+              </p>
+            </div>
+          )}
+        </nav>
+
+        {/* ACTIONS - Gold & Dark Contrast */}
+        <div className="p-6 bg-[#16312a] border-t border-white/10 space-y-3">
+          <button
+            className="w-full flex items-center justify-center gap-3 bg-[#b48222] text-white px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:brightness-110 transition-all shadow-xl rounded-sm"
+            onClick={() => handleDownload()}
+          >
+            <Download size={16} /> Download Full Report
+          </button>
+          {selectedUserId && (
+            <button
+              className="w-full flex items-center justify-center gap-3 bg-white/5 border border-[#b48222]/40 text-[#b48222] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#b48222] hover:text-white transition-all rounded-sm"
+              onClick={() => handleDownload(selectedUserId)}
+            >
+              <Download size={16} /> Download Selected Judge
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* MAIN AUDIT PANEL */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white px-12 py-10 border-b-[4px] border-[#b48222] shadow-sm flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-serif text-[#1a3a32] font-bold tracking-tight">
+              High Court of Kenya
+            </h1>
+            <div className="flex items-center gap-4 mt-3">
+              <span className="text-[10px] font-black text-[#b48222] uppercase tracking-[0.3em]">
+                Disciplinary Procedures Manual
+              </span>
+              <span className="h-1 w-1 bg-slate-300 rounded-full" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                Centralized Audit System
+              </span>
+            </div>
+          </div>
+          <div className="text-right pb-1">
+            <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mb-1">Archive Status</p>
+            <p className="text-[10px] font-bold text-[#1a3a32] flex items-center justify-end gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              Live Synchronization
+            </p>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#fdfcfb]">
+          {!selectedUserId && !loading ? (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+                 <Landmark size={40} className="text-slate-200" />
+              </div>
+              <h3 className="text-lg font-serif text-slate-400 italic tracking-widest uppercase">
+                Select a Judge from the registry to begin review
+              </h3>
+            </div>
+          ) : loading ? (
+            <div className="h-full flex flex-col items-center justify-center gap-6">
+              <Loader2 className="animate-spin text-[#b48222]" size={48} strokeWidth={1.5} />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#1a3a32]">
+                Decrypting Judicial Archives...
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-6xl mx-auto space-y-12">
+              {adminManuals.map((section: IManual) => {
+                const entriesForUser = columns.filter(col => 
+                  ((section as any)[col.key] as IManualEntry[])?.some(e => e.userId?._id === selectedUserId)
+                );
+
+                if (entriesForUser.length === 0) return null;
+
+                return (
+                  <div key={section._id} className="bg-white border border-slate-200 shadow-lg rounded-sm overflow-hidden">
+                    {/* SECTION HEADER - Matching Screenshot */}
+                    <div className="px-8 py-5 bg-[#1a3a32] flex justify-between items-center">
+                      <div className="flex gap-5 items-center">
+                        <span className="bg-[#b48222] text-white text-[11px] font-mono font-bold px-3 py-1.5 rounded-sm">
+                          {section.code}
+                        </span>
+                        <h3 className="text-[12px] font-bold text-white uppercase tracking-[0.2em]">
+                          {section.title}
+                        </h3>
+                      </div>
+                      <FileText size={18} className="text-white/10" />
+                    </div>
+
+                    {/* DRAFT CONTENT */}
+                    <div className="p-10 bg-[#fdfcfb] border-b border-dashed border-slate-100 relative">
+                       <div className="absolute top-0 right-10 -translate-y-1/2 bg-white border border-slate-200 px-4 py-1.5 text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] shadow-sm italic">
+                        Draft Provision
+                      </div>
+                      <p className="italic font-serif text-xl text-slate-700 leading-relaxed text-justify">
+                        {section.content}
+                      </p>
+                    </div>
+
+                    {/* AUDIT COLUMNS */}
+                    <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 bg-white">
+                      {columns.map((col) => {
+                        const entries = ((section as any)[col.key] || []).filter(
+                          (e: IManualEntry) => e.userId?._id === selectedUserId
+                        );
+
+                        return (
+                          <div key={col.key}>
+                            <h4 className="text-[10px] font-black text-[#b48222] uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
+                              <span className="w-1.5 h-1.5 bg-[#b48222] rounded-full shadow-[0_0_8px_#b48222]" />
+                              {col.label}
+                            </h4>
+
+                            <div className="space-y-8">
+                              {entries.length ? (
+                                entries.map((item: any, idx: number) => (
+                                  <div key={idx} className="group border-l-2 border-slate-50 pl-5 hover:border-[#b48222] transition-all">
+                                    <p className="text-[14px] text-[#1a3a32] leading-relaxed font-serif italic mb-4">
+                                      {getEntryText(item, col.key) || "[ACTION: Amend]"}
+                                    </p>
+                                    <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">
+                                      Timestamp: {new Date(item.createdAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-[10px] text-slate-300 italic font-serif">
+                                  No contribution for this field.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

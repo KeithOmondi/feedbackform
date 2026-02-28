@@ -1,9 +1,4 @@
-import {
-  createSlice,
-  createAsyncThunk,
-  isAnyOf,
-  type PayloadAction,
-} from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import * as service from "./manualService";
 import { type IManual, type PostEntryPayload } from "./manualService";
 
@@ -12,12 +7,14 @@ import { type IManual, type PostEntryPayload } from "./manualService";
 ================================ */
 interface ManualState {
   manuals: IManual[];
+  adminManuals: IManual[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ManualState = {
   manuals: [],
+  adminManuals: [],
   loading: false,
   error: null,
 };
@@ -26,7 +23,7 @@ const initialState: ManualState = {
     THUNKS
 ================================ */
 
-// Fetches the entire manual repository
+/** USER FETCH */
 export const fetchManuals = createAsyncThunk(
   "manual/fetchAll",
   async (_, { rejectWithValue }) => {
@@ -38,7 +35,19 @@ export const fetchManuals = createAsyncThunk(
   }
 );
 
-// Posts a single entry (Comment, Amendment, Justification, or Reference)
+/** ADMIN FETCH */
+export const fetchAdminManuals = createAsyncThunk(
+  "manual/fetchAdmin",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await service.getAdminManuals();
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Admin fetch failed");
+    }
+  }
+);
+
+/** POST ENTRY */
 export const postEntry = createAsyncThunk(
   "manual/postEntry",
   async (payload: PostEntryPayload, { rejectWithValue }) => {
@@ -52,33 +61,21 @@ export const postEntry = createAsyncThunk(
   }
 );
 
-// Updates metadata of a manual section (Admin only)
-export const editManual = createAsyncThunk(
-  "manual/update",
-  async (
-    { id, data }: { id: string; data: Partial<IManual> },
-    { rejectWithValue }
-  ) => {
+/** DOWNLOAD PDF REPORT (optional individual user) */
+export const downloadReport = createAsyncThunk<
+  void,                   // return type
+  string | undefined       // payload type (userId optional)
+>(
+  "manual/downloadReport",
+  async (userId, { rejectWithValue }) => {
     try {
-      return await service.updateManual(id, data);
+      await service.downloadManualReport(userId);
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Update failed");
+      return rejectWithValue(err.response?.data?.message || "Download failed");
     }
   }
 );
 
-// Removes a manual section from the registry
-export const removeManual = createAsyncThunk(
-  "manual/delete",
-  async (id: string, { rejectWithValue }) => {
-    try {
-      await service.deleteManual(id);
-      return id;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Delete failed");
-    }
-  }
-);
 
 /* ===============================
     SLICE
@@ -94,38 +91,29 @@ const manualSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      /* ===== FETCH SUCCESS ===== */
+      /* USER FETCH */
       .addCase(fetchManuals.fulfilled, (state, action: PayloadAction<IManual[]>) => {
         state.loading = false;
         state.manuals = action.payload;
         state.error = null;
       })
 
-      /* ===== DELETE SUCCESS ===== */
-      .addCase(removeManual.fulfilled, (state, action: PayloadAction<string>) => {
+      /* ADMIN FETCH */
+      .addCase(fetchAdminManuals.fulfilled, (state, action: PayloadAction<IManual[]>) => {
         state.loading = false;
-        state.manuals = state.manuals.filter((m) => m._id !== action.payload);
+        state.adminManuals = action.payload;
         state.error = null;
       })
 
-      /* ===== UNIFIED UPDATE LOGIC ===== */
-      // This handles both posting new feedback and editing section details
-      .addMatcher(
-        isAnyOf(postEntry.fulfilled, editManual.fulfilled),
-        (state, action: PayloadAction<IManual>) => {
-          state.loading = false;
-          state.error = null;
-          const index = state.manuals.findIndex(
-            (m) => m._id === action.payload._id
-          );
-          if (index !== -1) {
-            // Replaces the local section object with the updated one from server
-            state.manuals[index] = action.payload;
-          }
-        }
-      )
+      /* UPDATE AFTER POST */
+      .addCase(postEntry.fulfilled, (state, action: PayloadAction<IManual>) => {
+        state.loading = false;
+        state.error = null;
+        const index = state.manuals.findIndex((m) => m._id === action.payload._id);
+        if (index !== -1) state.manuals[index] = action.payload;
+      })
 
-      /* ===== GLOBAL PENDING STATE ===== */
+      /* GLOBAL PENDING */
       .addMatcher(
         (action) => action.type.endsWith("/pending"),
         (state) => {
@@ -134,7 +122,7 @@ const manualSlice = createSlice({
         }
       )
 
-      /* ===== GLOBAL REJECTED STATE ===== */
+      /* GLOBAL REJECTED */
       .addMatcher(
         (action) => action.type.endsWith("/rejected"),
         (state, action: any) => {
