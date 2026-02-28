@@ -128,13 +128,11 @@ const Login = () => {
 
           {/* Footer Info */}
           <div className="mt-10 text-center space-y-2">
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-              Restricted Access
-            </p>
+            
             <p className="text-[11px] font-medium text-slate-500 leading-snug">
-              If you encounter issues, contact the <br /> 
+              Access is restructed to serving High Court Judges <br /> 
               <span className="text-[#25443c] font-bold underline decoration-[#d9b929] underline-offset-4 cursor-help">
-                Office of the Registrar High Court
+                Contact the Office of the Registrar High Court fo assistance
               </span>
             </p>
           </div>
